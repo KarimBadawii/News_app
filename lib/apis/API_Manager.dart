@@ -35,14 +35,3 @@ class ApiManager {
     var jsonFormat = jsonDecode(response.body);
     return NewsModel.fromJson(jsonFormat);
   }
-
-  static Future<NewsModel> getSuggested(String id) async {
-    Uri url = Uri.https("newsapi.org", "/v2/everything", {
-      "apiKey": "85ec4734e96e423f86a81823344eeb1a",
-      "sources": id,
-    });
-    http.Response responce = await http.get(url);
-    var jsonFormat = jsonDecode(responce.body);
-    return NewsModel.fromJson(jsonFormat);
-  }
-}

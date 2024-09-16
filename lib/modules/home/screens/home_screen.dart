@@ -2,118 +2,152 @@ import 'package:flutter/material.dart';
 import 'package:news_app/core/widgets/BgWidget.dart';
 import 'package:news_app/models/category_data_model.dart';
 import 'package:news_app/models/news_model.dart';
+import 'package:news_app/modules/home/manager/home_connector.dart';
+import 'package:news_app/modules/home/manager/home_view_model.dart';
 import 'package:news_app/modules/home/screens/category_screen.dart';
 import 'package:news_app/modules/home/screens/search_delegate.dart';
 import 'package:news_app/modules/home/screens/settings_screen.dart';
 import 'package:news_app/modules/home/screens/tabs_screen.dart';
 import 'package:news_app/modules/home/widgets/category_widget.dart';
+import 'package:provider/provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
-
   static const String routeName = "home";
-
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> implements HomeConnector {
+  HomeViewModel viewModel = HomeViewModel();
+
+  @override
+  void initState() {
+    viewModel.connector = this;
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
     NewsModel? newsModel;
     return BgWidget(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-            elevation: 0,
-            centerTitle: true,
-            title: const Text(
-              "News App",
-              style: TextStyle(
+      child: ChangeNotifierProvider(
+        create: (context) => viewModel,
+        builder: (context, child) {
+          Provider.of<HomeViewModel>(context);
+          return Scaffold(
+            backgroundColor: Colors.transparent,
+            appBar: AppBar(
+                elevation: 0,
+                centerTitle: true,
+                title: const Text(
+                  "News App",
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 30,
+                      fontWeight: FontWeight.w400),
+                ),
+                iconTheme: const IconThemeData(
                   color: Colors.white,
-                  fontSize: 30,
-                  fontWeight: FontWeight.w400),
+                  size: 30,
+                ),
+                actions: [
+                  IconButton(
+                    onPressed: () {
+                      showSearch(
+                        context: context,
+                        delegate: CustomSearchDelegate(),
+                      );
+                    },
+                    icon: const Icon(
+                      Icons.search,
+                    ),
+                  ),
+                ],
+                backgroundColor: Colors.green,
+                shape: const RoundedRectangleBorder(
+                  borderRadius:
+                      BorderRadius.vertical(bottom: Radius.circular(40)),
+                )),
+            drawer: Drawer(
+              child: Column(
+                children: [
+                  const DrawerHeader(
+                      decoration: BoxDecoration(color: Colors.green),
+                      child: Center(
+                          child: Text(
+                        "News App",
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 25,
+                            fontWeight: FontWeight.bold),
+                      ))),
+                  ListTile(
+                    onTap: () {
+                      viewModel.categoryData = null;
+                      setState(() {});
+                      Navigator.pop(context);
+                    },
+                    leading: const Icon(
+                      Icons.menu,
+                      size: 35,
+                      color: Colors.green,
+                    ),
+                    title: const Text(
+                      "Categories",
+                      style: TextStyle(fontSize: 25),
+                    ),
+                    splashColor: Colors.transparent,
+                  ),
+                  ListTile(
+                    onTap: () {
+                      Navigator.pushNamed(context, SettingsScreen.routeName);
+                    },
+                    leading: const Icon(
+                      Icons.settings,
+                      size: 35,
+                      color: Colors.green,
+                    ),
+                    title: const Text(
+                      "Settings",
+                      style: TextStyle(fontSize: 25),
+                    ),
+                    splashColor: Colors.transparent,
+                  ),
+                ],
+              ),
             ),
-            iconTheme: const IconThemeData(
-              color: Colors.white,
-              size: 30,
-            ),
-            actions: [
-              IconButton(
-                onPressed: () {
-                  showSearch(
-                    context: context,
-                    delegate: CustomSearchDelegate(),
-                  );
-                },
-                icon: const Icon(
-                  Icons.search,
-                ),
-              ),
-            ],
-            backgroundColor: Colors.green,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(40)),
-            )),
-        drawer: Drawer(
-          child: Column(
-            children: [
-              const DrawerHeader(
-                  decoration: BoxDecoration(color: Colors.green),
-                  child: Center(
-                      child: Text(
-                    "News App",
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 25,
-                        fontWeight: FontWeight.bold),
-                  ))),
-              ListTile(
-                onTap: () {
-                  categoryData = null;
-                  setState(() {});
-                  Navigator.pop(context);
-                },
-                leading: const Icon(
-                  Icons.menu,
-                  size: 35,
-                  color: Colors.green,
-                ),
-                title: const Text(
-                  "Categories",
-                  style: TextStyle(fontSize: 25),
-                ),
-                splashColor: Colors.transparent,
-              ),
-              ListTile(
-                onTap: () {
-                  Navigator.pushNamed(context, SettingsScreen.routeName);
-                },
-                leading: const Icon(
-                  Icons.settings,
-                  size: 35,
-                  color: Colors.green,
-                ),
-                title: const Text(
-                  "Settings",
-                  style: TextStyle(fontSize: 25),
-                ),
-                splashColor: Colors.transparent,
-              ),
-            ],
-          ),
-        ),
-        body: categoryData == null
-            ? CategoryScreen(onTap: onCategoryTap)
-            : TabsScreen(id: categoryData!.id),
+            body: viewModel.categoryData == null
+                ? CategoryScreen(onTap: viewModel.onCategoryTap)
+                : TabsScreen(
+                    viewModel: viewModel,
+                  ),
+          );
+        },
       ),
     );
   }
 
-  CategoryData? categoryData;
+  @override
+  hideLoading() {
+    Navigator.pop(context);
+  }
 
-  onCategoryTap(cat) {
-    categoryData = cat;
-    setState(() {});
+  @override
+  showLoading() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return const AlertDialog(
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          title: Center(
+            child: CircularProgressIndicator(
+              color: Colors.green,
+            ),
+          ),
+        );
+      },
+    );
   }
 }
